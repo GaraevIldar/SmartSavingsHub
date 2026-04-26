@@ -238,7 +238,7 @@ docker-compose → k8s. Те же Docker-образы, другой оркест
 | FR‑1 | Регистрация через Zitadel (OIDC Authorization Code + PKCE)        | Must      |
 | FR‑2 | Логин через Zitadel с получением JWT access token + refresh token | Must      |
 | FR‑3 | Автоматическое обновление access token (silent refresh)           | Must      |
-| FR‑4 | Получение профиля из JWT claims (sub, email, name)                | Must      |
+| FR‑4 | Получение профиля из JWT claims (sub, email, name, preferred_username) | Must      |
 
 ### Серверы и каналы
 
@@ -321,7 +321,7 @@ docker-compose → k8s. Те же Docker-образы, другой оркест
 |:--|:--|
 | Регистрация | Встроенная UI-форма (кастомизация брендинга) |
 | Логин | OIDC Authorization Code Flow + PKCE |
-| JWT выдача | Access token с claims: sub, email, name |
+| JWT выдача | Access token с claims: sub, email, name, preferred_username |
 | Refresh tokens | Silent refresh через iframe |
 | User management | Zitadel Console или Management API |
 
@@ -363,7 +363,7 @@ In-memory: ConcurrentDictionary для presence (userId → lastSeen), Connectio
 
 Схема БД: `guild` (guilds, channels, members, invites, bans).
 
-При вступлении пользователя: `display_name` копируется из JWT в таблицу `members` (денормализация - не ходить в Zitadel за именами).
+При вступлении пользователя: `display_name` (из JWT claim `name`) и `username` (из JWT claim `preferred_username`) копируются в таблицу `members` (денормализация - не ходить в Zitadel за именами при каждом запросе участников). `username` уникален глобально, формат `[a-z0-9_.]`, 3–32 символа - используется для @ упоминаний.
 
 ### Messaging Service - "Что ты пишешь?"
 
