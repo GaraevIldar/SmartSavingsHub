@@ -1,9 +1,24 @@
-Команда: 
-- **Б1** (Backend/DevOps) 
-- **Б2** (Backend/QA)
-- **Ф1** (Frontend/Чат+Авторизация)
-- **Ф2** (Frontend/Голос+Навигация)
+```markdown
+# NexTalk - План задач
 
+> **Б1** (Backend/DevOps), **Б2** (Backend/QA), **Ф1** (Frontend), **Ф2** (Frontend).
+
+---
+
+## Содержание
+
+1. [Обзор](#обзор)
+2. [Стадия 1 - Монолит (Неделя 1–2)](#стадия-1--монолит-неделя-12)
+3. [Стадия 2 - Микросервисы (Неделя 3)](#стадия-2--микросервисы-неделя-3)
+4. [Стадия 3 - Kubernetes (Неделя 4)](#стадия-3--kubernetes-неделя-4)
+5. [Граф зависимостей](#граф-зависимостей)
+6. [Критический путь](#критический-путь)
+7. [Тест-кейсы](#тест-кейсы)
+8. [Что вернуть при опережении](#что-вернуть-при-опережении)
+9. [Чего НЕ делать](#чего-не-делать)
+10. [Бюджет часов](#бюджет-часов)
+
+---
 
 ## Обзор
 
@@ -18,35 +33,38 @@
 └──────────────┘   └────────────────────┘   └─────────────────────┘
 ```
 
+**Допуск:** 28 апреля.
+**Демо:** ~13 мая.
+
+---
+
 ## Стадия 1 - Монолит (Неделя 1–2)
 
 ### Неделя 1: Фундамент
 
-#### Б1 - Backend / DevOps
+#### Б1 - Backend / DevOps (~22 ч)
 
-| ID           | Задача                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Часы | Результат                                                                                                                                                                                 | Зависит от   |
-| :----------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------- |
-| **INFRA‑01** | Создать .NET 10 Solution:                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | 2    | Solution собирается, `dotnet build` ok                                                                                                                                                    | -            |
-| **INFRA‑02** | Создать и настроить `docker-compose.yaml`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | 2    |                                                                                                                                                                                           |              |
-| Б1-34        | **CI/CD Pipeline (GitHub Actions).** Создать `.github/workflows/ci.yml` сразу на старте — CI настраивается один раз и работает весь проект. Триггеры: push и PR в `main`. Jobs: 1) `lint` — `dotnet format --verify-no-changes` (падает если код не отформатирован); 2) `test` — `dotnet test --collect:"XPlat Code Coverage"` (все юнит- и интеграционные тесты, падает при красном тесте — на старте тестов ещё нет, job просто проходит); 3) `build` — `docker build` для каждого из 5 .NET сервисов (гарантия сборки). Опц.: 4) `push` — загрузка образов в GitHub Container Registry (`ghcr.io/repo/guild-service:sha`) при merge в `main`. Смысл: каждый последующий push с тестами автоматически их прогоняет — не нужно запускать руками.     | 4    | GitHub Actions: ✅ зелёный check при push в `main`, ❌ красный если упал тест или не собрался образ                                                                                         | Б1-01        |
-| Б1-02        | docker-compose: Nginx (alpine) + .NET монолит + PostgreSQL 17 + Zitadel + LiveKit                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | 4    | `docker compose up` - все 5 контейнеров запускаются                                                                                                                                       | Б1-01        |
-| Б1-03        | Nginx.conf: proxy_pass к монолиту, WebSocket upgrade, rate_limit 100/IP, $request_id                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | 2    | Запросы от SPA через Nginx → монолит                                                                                                                                                      | Б1-02        |
-| Б1-04        | Serilog JSON + Correlation ID middleware (X-Request-Id из Nginx)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | 2    | Логи в stdout в JSON, request_id во всех строках                                                                                                                                          | Б1-01        |
-| Б1-05        | PostgreSQL: EF Core DbContext, схемы `guild` и `messaging`, первая миграция                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | 3    | `dotnet ef database update` создает таблицы                                                                                                                                               | Б1-02        |
-| Б1-06        | **Guild Module: серверы, каналы, роли.** Реализовать эндпоинты (полный список — [README §6 «Guild Service»](README.md#guild-service----где-ты-общаешься)): `POST /api/guilds` (создать сервер, имя из body), `GET /api/guilds` (мои серверы — фильтр по `sub` из JWT), `POST /api/guilds/{id}/channels` (создать канал, тип: text/voice из body), `GET /api/guilds/{id}/channels` (список каналов). Реализовать `RbacService`: 3 фиксированные роли Owner / Admin / Member, хардкоженные enum-проверки (не bitmask). При создании сервера: автоматически INSERT в `members` с ролью Owner + `display_name` из JWT claim `name` (денормализация — объяснение: [README §6 «При вступлении пользователя»](README.md#guild-service----где-ты-общаешься)). | 5    | `POST /api/guilds {"name":"..."}` с валидным JWT → `201 {id, name}`. `GET /api/guilds` → только серверы текущего пользователя. Без JWT → `401`. Создатель есть в `members` с ролью Owner. | Б1-05, Б2-02 |
-| Б1-07        | **Messaging Module: отправка и история сообщений.** Два эндпоинта: 1) `POST /internal/messages` — принять сообщение от WS Gateway (inter-service вызов без JWT, с `X-Correlation-Id`), сохранить в таблицу `messages`. В Неделе 3 этот эндпоинт получит Outbox (Б2-13) — интерфейс не изменится. 2) `GET /api/channels/{id}/messages?before={messageId}&limit=50` — cursor-based пагинация: `WHERE channel_id=@id AND id < @cursor ORDER BY id DESC LIMIT 50`. Почему cursor, а не offset: `OFFSET 10000` — медленный скан, cursor — быстрый индексный. Фронт подгружает следующую страницу по последнему id в ответе.                                                                                                                                | 4    | `POST /internal/messages {channelId, userId, text}` → `201 {messageId}`. `GET /api/channels/X/messages?before=100` → массив ≤50 сообщений с id<100, новые сверху.                         | Б1-05        |
+| # | Задача | Часы | Результат | Зависит от |
+|:--|:--|:--|:--|:--|
+| Б1-01 | Создать .NET 9 Solution: `NexTalk.sln`, проекты: `NexTalk.Api`, `NexTalk.Guild`, `NexTalk.Messaging`, `NexTalk.Voice`, `NexTalk.WebSocket`, `NexTalk.Shared` | 2 | Solution собирается, `dotnet build` ok | - |
+| Б1-02 | docker-compose: Nginx (alpine) + .NET монолит + PostgreSQL 17 + Zitadel + LiveKit | 4 | `docker compose up` - все 5 контейнеров запускаются | Б1-01 |
+| Б1-03 | Nginx.conf: proxy_pass к монолиту, WebSocket upgrade, rate_limit 100/IP, $request_id | 2 | Запросы от SPA через Nginx → монолит | Б1-02 |
+| Б1-04 | Serilog JSON + Correlation ID middleware (X-Request-Id из Nginx) | 2 | Логи в stdout в JSON, request_id во всех строках | Б1-01 |
+| Б1-05 | PostgreSQL: EF Core DbContext, схемы `guild` и `messaging`, первая миграция | 3 | `dotnet ef database update` создает таблицы | Б1-02 |
+| Б1-06 | Guild Module: REST CRUD серверов и каналов (POST/GET), RbacService (Owner/Admin/Member) | 5 | API: POST /api/guilds, GET /api/guilds, POST /api/guilds/{id}/channels | Б1-05 |
+| Б1-07 | Messaging Module: POST /internal/messages, GET /api/channels/{id}/messages (cursor pagination) | 4 | Сообщения сохраняются и читаются из БД | Б1-05 |
 
-#### Б2 - Backend / QA (~24 ч)
+#### Б2 - Backend / QA (~22 ч)
 
 | # | Задача | Часы | Результат | Зависит от |
 |:--|:--|:--|:--|:--|
 | Б2-01 | Настроить Zitadel: создать проект NexTalk, Application (SPA, PKCE), redirect URIs | 3 | Zitadel Console → Application → Client ID готов | Б1-02 |
-| Б2-02 | JWT-валидация middleware в .NET: OIDC Discovery от Zitadel, извлечение sub/email/name | 3 | Запрос без валидного JWT → 401 Unauthorized | Б2-01 |
+| Б2-02 | JWT-валидация middleware в .NET: OIDC Discovery от Zitadel, извлечение sub/email/name/preferred_username | 3 | Запрос без валидного JWT → 401 Unauthorized | Б2-01 |
 | Б2-03 | WebSocket Module: SignalR Hub `/ws/chat` - SendMessage, ReceiveMessage | 4 | Два клиента отправляют/получают сообщения через WS | Б1-01, Б2-02 |
 | Б2-04 | WebSocket Module: Heartbeat, PresenceTracker (ConcurrentDictionary) | 3 | Клиент отправляет heartbeat → presence обновляется | Б2-03 |
-| Б2-05 | **Абстракция клиентов (подготовка к Стадии 2).** Создать интерфейсы `IGuildAccessClient` (метод `CheckAccess(userId, channelId) → bool`) и `IMessagingClient` (метод `SendMessage(channelId, userId, text) → messageId`). Сейчас — in-process реализации: `InProcessGuildAccessClient` вызывает `GuildModule` напрямую, `InProcessMessagingClient` — `MessagingModule`. **Зачем сейчас:** в Неделе 3 (Б1-18, Б1-19) эти реализации заменяются на HTTP-клиенты — WS Hub не изменится ни на строчку, DI отдаст другой класс. Паттерн: Dependency Inversion / Strategy. | 3 | WS Hub вызывает `_guildClient.CheckAccess(userId, channelId)` → `true/false`. Замена реализации в DI не требует правок в Hub. | Б1-06, Б2-03 |
+| Б2-05 | Интерфейсы: `IGuildAccessClient`, `IMessagingClient`. In-process реализации | 3 | WS → IGuildAccessClient.CheckAccess() → Guild Module | Б1-06, Б2-03 |
 | Б2-06 | Guild Module: инвайты (POST /api/guilds/{id}/invites, POST /api/invites/{code}/accept) | 4 | Генерация инвайта с TTL, вступление по ссылке | Б1-06 |
-| Б2-У1 | **Юнит-тесты: Guild + Messaging (Неделя 1).** Фреймворк: xUnit + Moq. Что покрыть: 1) `RbacService` — для каждой роли (Owner/Admin/Member) проверить что разрешённые действия возвращают `true`, запрещённые — `false`; 2) логика инвайтов — `GenerateCode()` возвращает непустую строку, истёкший TTL отклоняется, превышение `maxUses` отклоняется; 3) cursor-pagination в Messaging — метод формирует корректный SQL `WHERE id < @cursor LIMIT 50`. Тестировать только бизнес-логику: DbContext и HTTP мокать через интерфейсы. Цель: ≥80% coverage на `NexTalk.Guild.Domain` и `NexTalk.Messaging.Domain`. | 4 | `dotnet test` — нет красных тестов, coverage report ≥80% на доменных неймспейсах | Б1-06, Б1-07 |
+| Б2-Z | Брендинг Zitadel: логотип NexTalk, цвета, заголовок «Добро пожаловать в NexTalk» | 2 | Форма входа имеет логотип и цвета NexTalk, footer без упоминаний Zitadel | Б2-01 |
 
 #### Ф1 - Frontend 1 (~18 ч)
 
@@ -84,18 +102,17 @@
 | Б1-13 | GET /api/guilds/{id}/members: список с ролями, онлайн-статусом | 2 | Список участников с presence | Б1-06, Б2-04 |
 | Б1-14 | DELETE /api/messages/{id}: удаление сообщений (автор/Admin/Owner) | 2 | Сообщение удаляется, проверка прав | Б1-07, Б2-02 |
 
-#### Б2 - Backend / QA (~26 ч)
+#### Б2 - Backend / QA (~24 ч)
 
 | # | Задача | Часы | Результат | Зависит от |
 |:--|:--|:--|:--|:--|
 | Б2-07 | Guild Module: PUT /api/guilds/{id}/members/{uid}/role - назначение ролей (только Owner) | 3 | Owner может сделать Member → Admin | Б1-06 |
-| Б2-З | **Zitadel брендинг — форма входа выглядит как NexTalk.** В Zitadel Console → Settings → Branding: 1) загрузить логотип NexTalk; 2) задать цвета (primary: `#5865F2`, background: `#313338` для dark theme); 3) убрать / заменить footer «Powered by Zitadel»; 4) задать заголовок формы «Добро пожаловать в NexTalk». Опц.: задать кастомный домен `auth.nextalk.local` — URL входа выглядит как часть продукта. Цель: пользователь проходит регистрацию/вход и не видит, что это Zitadel — видит NexTalk. | 3 | Форма входа имеет логотип и цвета NexTalk, footer без упоминаний Zitadel, заголовок «Добро пожаловать в NexTalk» | Б2-01 |
 | Б2-08 | Voice Module: принудительное отключение DELETE /internal/voice/{userId}/disconnect | 2 | При бане Voice удаляет из LiveKit + SessionStore | Б1-09 |
-| Б2-09 | **`POST /internal/broadcast` — принять от Outbox, разослать через SignalR.** Реализовать эндпоинт в WS Gateway: принимает `{channelId, event, payload}` от `BroadcastConsumer` (Outbox Worker из Б2-14, Неделя 3). Разослать через `IHubContext<ChatHub>`: `await hub.Clients.Group(channelId).SendAsync("ReceiveMessage", payload)`. SignalR Groups: при подключении клиент вызывает `AddToGroupAsync(connectionId, channelId)` и автоматически получает все сообщения канала. **Важно:** `/internal/*` не проксируется через Nginx, не требует JWT — только `X-Correlation-Id`. | 4 | `POST /internal/broadcast {"channelId":"ch-42", "event":"message.created", "payload":{...}}` → все клиенты канала `ch-42` получают SignalR событие `ReceiveMessage`. | Б2-03 |
 | Б2-10 | WebSocket Module: POST /internal/disconnect/{userId} - принудительное отключение WS | 2 | При бане WS Gateway закрывает соединение | Б2-03 |
 | Б2-11 | End-to-end ручное тестирование: регистрация → создание сервера → инвайт → сообщения → голос | 5 | Весь happy path работает в монолите | Все W1-W2 задачи |
 | Б2-12 | Написать тест-кейсы: TC-01..TC-20 (чеклист для демо) | 4 | Документ с тест-кейсами, все проверены на монолите | Б2-11 |
-| Б2-У2 | **Юнит-тесты: Voice + WebSocket (Неделя 2).** xUnit + Moq. Что покрыть: 1) `VoiceService.GenerateToken()` — возвращаемый LiveKit JWT содержит claims `room`, `identity`, `canPublish: true`, срок жизни корректный; мокать `ILiveKitClient`; 2) `PresenceTracker` — `AddUser()` добавляет, `RemoveUser()` убирает, `GetOnlineUsers()` не возвращает пользователей с `lastSeen` старше 30 сек; мокать `IClock` (не `DateTime.Now` — детерминированное время). Цель: 100% покрытие методов Voice токен-логики и Presence TTL-логики. | 3 | `dotnet test` — нет красных тестов, методы Voice и Presence покрыты на 100% | Б1-08, Б2-04 |
+| Б2-У1 | Юнит-тесты: RbacService (все роли), логика TTL/max_uses инвайтов, PresenceTracker (TTL-логика). xUnit + Moq. | 4 | `dotnet test` зелёный, coverage ≥80% на доменной логике | Б1-06, Б1-07, Б2-04 |
+| Б2-У2 | Юнит-тесты: Voice (генерация токена — claims room/identity/canPublish). xUnit + Moq. | 4 | `dotnet test` зелёный, 100% покрытие Voice-токен-логики | Б1-08, Б1-09 |
 
 #### Ф1 - Frontend 1 (~18 ч)
 
@@ -130,26 +147,26 @@
 | Б1-15 | Dockerfile для каждого сервиса (Guild, Messaging, Voice, WS Gateway) - multi-stage | 4 | 4 Docker-образа собираются, < 200MB каждый | Б1-01 |
 | Б1-16 | docker-compose v2: 5 .NET контейнеров + Nginx + PG + Zitadel + LiveKit (8 контейнеров) | 3 | `docker compose up` - все 8 контейнеров стартуют | Б1-15 |
 | Б1-17 | Nginx.conf v2: маршрутизация по 5 upstream (guild:5001, messaging:5002, voice:5003, ws:5004, zitadel:8080) | 2 | Каждый URL → свой сервис | Б1-16 |
-| Б1-18 | **`HttpGuildClient` — замена in-process на HTTP (Стадия 2).** Реализовать `IGuildAccessClient` (из Б2-05) через `IHttpClientFactory`: `GET http://guild-service:5001/internal/channels/{id}/check-access?userId={uid}`. Зарегистрировать в DI вместо `InProcessGuildAccessClient` — WS Hub не меняется. Добавить `DelegatingHandler` для автоматической прокидки `X-Correlation-Id` во все исходящие запросы. Polly подключается к этому HttpClient в Б1-21. | 3 | `GET /internal/channels/X/check-access?userId=123` → `{"allowed": true}`. Замена прозрачна: WS Hub не изменился. Correlation ID виден в логах обоих сервисов. | Б1-15, Б2-05 |
-| Б1-19 | **`HttpMessagingClient` — WS Gateway → Messaging через HTTP.** Реализовать `IMessagingClient` (из Б2-05) через `IHttpClientFactory`: `POST http://messaging-service:5002/internal/messages`. Заголовки: `X-Correlation-Id` (через DelegatingHandler), `X-Idempotency-Key` (прокидывается из запроса клиента). Зарегистрировать в DI вместо `InProcessMessagingClient`. | 2 | WS Gateway → `POST /internal/messages {channelId, userId, text}` → Messaging Service → `201`. Idempotency Key не теряется при передаче. | Б1-15, Б2-05 |
+| Б1-18 | `HttpGuildClient` - реализация IGuildAccessClient через HttpClient. Заменяет in-process вызовы из Стадии 1 (Б1-11, Б1-12) на HTTP. | 3 | Messaging → HTTP → Guild Service (вместо in-process) | Б1-15 |
+| Б1-19 | `HttpMessagingClient` - реализация IMessagingClient через HttpClient. Заменяет in-process вызовы из Стадии 1 на HTTP. | 2 | WS Gateway → HTTP → Messaging Service | Б1-15 |
 | Б1-20 | Health Checks: каждый сервис → GET /health (PG check, downstream check) | 2 | docker-compose healthcheck + depends_on condition: service_healthy | Б1-16 |
 | Б1-21 | Polly: Retry (3x, backoff+jitter) + Circuit Breaker (5 errors/30s, 15s open) на всех HttpClient | 4 | Логи Circuit Breaker state transitions, retry attempts | Б1-18, Б1-19 |
 | Б1-22 | Deadlines: X-Deadline middleware, CancellationToken propagation, default 5s | 2 | Timeout → 504, каскадная отмена | Б1-18 |
 | Б1-23 | ASP.NET Rate Limiter: per-user по JWT sub, 100 RPS | 2 | Превышение → 429, Retry-After | Б2-02 |
 
-
-#### Б2 - Backend / QA (~27 ч)
+#### Б2 - Backend / QA (~29 ч)
 
 | # | Задача | Часы | Результат | Зависит от |
 |:--|:--|:--|:--|:--|
 | Б2-13 | Messaging Service: Outbox Pattern - INSERT message + outbox_event в одной транзакции | 4 | Outbox-запись создается рядом с сообщением | Б1-15 |
 | Б2-14 | OutboxWorker (BackgroundService): poll → System.Threading.Channels → BroadcastConsumer | 4 | События из outbox → POST /internal/broadcast | Б2-13 |
+| Б2-09 | WebSocket Module: POST /internal/broadcast - прием событий от Outbox, рассылка через SignalR Groups | 4 | Endpoint работает, SignalR Groups по channelId | Б2-03, Б2-14 |
 | Б2-15 | IdempotencyMiddleware: проверка X-Idempotency-Key, таблица idempotency_keys, TTL 24ч | 3 | Дубль → 200 с кэшированным ответом, без INSERT | Б1-15 |
 | Б2-16 | IdempotencyCleanup: BackgroundService, удаление expired keys каждый час | 1 | Таблица idempotency_keys не растет бесконечно | Б2-15 |
 | Б2-17 | Internal API: /internal/* endpoints не требуют JWT, только X-Correlation-Id | 2 | Internal endpoints доступны без Bearer, но с correlation | Б1-15 |
 | Б2-18 | Prometheus метрики: prometheus-net.AspNetCore (http_requests_total, http_request_duration_seconds) | 3 | GET /metrics → Prometheus-формат | Б1-15 |
 | Б2-19 | End-to-end тестирование микросервисов: все TC-01..TC-20 | 5 | Все тест-кейсы зеленые на docker-compose | Б1-16, Б2-14 |
-| Б2-У3 | **Интеграционные тесты с TestContainers (Неделя 3).** CI уже настроен (Б1-34) и автоматически запускает эти тесты при каждом push.  Пакет `Testcontainers.PostgreSql` поднимает реальный PostgreSQL в Docker при запуске тестов — не нужно внешнее окружение. Что покрыть: 1) **Outbox end-to-end** — `INSERT message + outbox_event` в одной транзакции → `OutboxWorker` обрабатывает → `BroadcastConsumer.PostAsync()` вызывается (проверить через мок IHttpClient); 2) **Idempotency** — отправить `POST /internal/messages` с одинаковым `X-Idempotency-Key` дважды → в `messages` ровно одна запись, второй ответ `200` с кэшированным телом, не `201`. Тесты запускаются в CI (Б1-34). | 5 | Интеграционные тесты зелёные локально и в GitHub Actions | Б2-13, Б2-14, Б2-15, Б1-34 |
+| Б2-У3 | Интеграционные тесты с TestContainers: Outbox end-to-end (мок BroadcastConsumer), Idempotency (дубль → 200, ровно одна запись в БД) | 5 | Интеграционные тесты зелёные локально и в GitHub Actions | Б2-13, Б2-14, Б2-15 |
 
 #### Ф1 - Frontend 1 (~17 ч)
 
@@ -200,7 +217,7 @@
 | Б2-23 | Тестирование resilience: Idempotency демо (отправить → kill network → retry → нет дубля) | 2 | Показываемый сценарий для демо | Б2-15, Б2-21 |
 | Б2-24 | Подготовка к демо: сценарий показа, порядок фич, fallback план | 3 | Документ «Сценарий демо» | Б2-21 |
 | Б2-25 | Баг-фиксы: критические баги из Б2-21 | 5 | Все critical/high баги закрыты | Б2-21 |
-| Б2-У4 | **Финальный отчёт покрытия (Неделя 4).** Запустить `dotnet test --collect:"XPlat Code Coverage"` + `reportgenerator -reports:**/coverage.cobertura.xml -targetdir:coverage-report -reporttypes:Html`. Открыть отчёт, проверить метрики. **Целевые показатели (требование преподавателя):** общее покрытие ≥70%; доменная логика (Guild.Domain, Messaging.Domain) ≥85%; критические пути (Outbox, Idempotency, RBAC) ≥90%. Добавить coverage badge в README. Убедиться что CI (Б1-34) прогоняет тесты при каждом push. | 2 | HTML coverage report сформирован, целевые метрики достигнуты, badge в README | Б2-У1, Б2-У2, Б2-У3, Б1-34 |
+| Б2-У4 | Coverage report: запустить `dotnet test --collect:"XPlat Code Coverage"` + `reportgenerator`. Проверить метрики: общее ≥70%, доменная логика ≥85%, критические пути (Outbox, Idempotency, RBAC) ≥90%. Добавить badge в README. | 2 | HTML coverage report сформирован, метрики достигнуты, badge в README | Б2-У1, Б2-У2, Б2-У3 |
 
 #### Ф1 - Frontend 1 (~17 ч)
 
@@ -249,7 +266,7 @@
   ├── Б1-18 (HttpGuildClient) ──→ Б1-21 (Polly)
   ├── Б1-19 (HttpMessagingClient) ──→ Б1-21
   ├── Б1-20 (Health Checks)
-  ├── Б2-13 (Outbox) ──→ Б2-14 (OutboxWorker)
+  ├── Б2-13 (Outbox) ──→ Б2-14 (OutboxWorker) ──→ Б2-09 (POST /internal/broadcast)
   └── Б2-15 (Idempotency) ──→ Б2-16 (Cleanup)
 
 --- Неделя 4 ---
@@ -270,7 +287,7 @@
 ```
 Б1-01 → Б1-02 → Б2-01 → Б2-02 → Б2-03 → Б2-05 → Б1-06 → Б1-07
   → Б2-11 (E2E тест монолита)
-  → Б1-15 → Б1-16 → Б1-18 → Б1-21 → Б2-13 → Б2-14
+  → Б1-15 → Б1-16 → Б1-18 → Б1-21 → Б2-13 → Б2-14 → Б2-09
   → Б2-19 (E2E тест микросервисов)
   → Б1-24 → Б1-25 → Б1-29 → Б1-33
   → Б2-21 (E2E тест k8s)
@@ -317,17 +334,12 @@
 
 | Приоритет | Фича | Часы | Кто |
 |:--|:--|:--|:--|
-| 1 | Редактирование сообщений (`PUT /api/messages/{id}`) + WS event `message.edited` | 4 | Б2 + Ф2 |
-| 2 | Typing indicator (`typing.start` / `typing.stop` SignalR events, auto-stop 3с) | 3 | Б2 + Ф2 |
-| 3 | Emoji-реакции на сообщения (таблица `reactions`, WS event `reaction.added`) | 6 | Б2 + Ф2 |
-| 4 | OAuth (Google / GitHub) в Zitadel — включить Social Login в Console, код NexTalk не меняется | 2 | Б2 |
-| 5 | Redis backplane для WS Gateway — `AddSignalR().AddStackExchangeRedis("redis:6379")` (1 строка кода) + Redis-контейнер в compose/k8s. Снимает ограничение «только 1 реплика WS Gateway» (см. [README §10 In-Memory](README.md#in-memory-без-redis)) | 4 | Б1 |
-| 6 | OpenTelemetry + Jaeger — distributed tracing: `AddOpenTelemetry().WithTracing(...)` в каждом сервисе + Jaeger-контейнер. Waterfall-граф запроса через все сервисы — видно где именно тормозит | 5 | Б1 |
-| 7 | HPA (Horizontal Pod Autoscaler) для stateless подов Guild, Messaging, Voice: CPU threshold 70%, min 1 / max 3 реплики. Не для WS Gateway (stateful без Redis) и не для PG / Zitadel | 3 | Б1 |
-| 8 | gRPC на `/internal/*` эндпоинтах — заменить `HttpGuildClient` / `HttpMessagingClient` ([Б1-18](README.md#7-межсервисное-взаимодействие), [Б1-19](README.md#7-межсервисное-взаимодействие)) на proto-контракты. Строгая типизация, меньше latency. Большой объём: .proto файлы, кодогенерация, Polly адаптеры для gRPC | 12 | Б1 + Б2 |
-| 9 | Поиск по истории сообщений — PostgreSQL FTS: `tsvector` индекс на `messages.text` + `GET /api/search?q=...` + UI-фильтры | 5 | Б1 + Ф1 |
-| 10 | Helm charts — переупаковать k8s-манифесты в Helm chart для параметризации `dev` / `prod` окружений | 6 | Б1 |
-| 11 | Больше Grafana дашбордов: p99 latency per service, Outbox lag (кол-во необработанных событий) | 3 | Б1 |
+| 1 | Редактирование сообщений (PUT /api/messages/{id}) | 4 | Б2 + Ф2 |
+| 2 | Emoji-реакции на сообщения | 6 | Б2 + Ф2 |
+| 3 | Typing indicator (SignalR event) | 3 | Б2 + Ф2 |
+| 4 | Поиск серверов / пользователей | 5 | Б1 + Ф1 |
+| 5 | OAuth (Google) в Zitadel | 3 | Б2 |
+| 6 | Больше Grafana дашбордов (per-service breakdown) | 3 | Б1 |
 
 ---
 
@@ -335,12 +347,18 @@
 
 | Запрет | Почему |
 |:--|:--|
-| ❌ RabbitMQ / Kafka | Outbox Pattern + HTTP POST на `/internal/broadcast` полностью закрывает at-least-once доставку для наших объёмов. Broker — лишняя инфраструктура без выигрыша |
-| ❌ Service mesh (Istio / Linkerd) | Требует 8+ GB RAM на minikube, сложная конфигурация. Polly + Nginx уже дают Retry, CB, Rate Limiting — Service mesh не добавляет ценности |
-| ❌ E2EE реализация | Signal Protocol + Web Crypto API — отдельный месяц работы. В MVP только архитектурное описание и TODO в README |
-| ❌ Мобильный адаптив | Desktop only. CSS Grid без media queries. Экономит 10+ часов фронтенда |
-| ❌ MinIO / файловые вложения | Нет файлов в MVP. S3-совместимое хранилище — отдельная инфраструктура |
-| ❌ Helm charts | Ручные YAML-манифесты учат k8s-примитивам напрямую: виден каждый Deployment, Service, Ingress. Helm скрывает это за шаблонами — теряется обучающая ценность. При 8 сервисах нет реального выигрыша от шаблонизации. Есть в «Если успеем» |
+| ❌ Redis | In-memory достаточно для демо (1 instance). Redis - лишняя сложность |
+| ❌ gRPC | HTTP проще отлаживать, Polly работает из коробки |
+| ❌ RabbitMQ / Kafka | Outbox + HTTP заменяют broker для наших объемов |
+| ❌ Service mesh (Istio) | Слишком тяжелый для minikube + 4 человека |
+| ❌ E2EE реализация | Только в архитектуре и презентации, не в коде |
+| ❌ Мобильный адаптив | Desktop only, CSS Grid без media queries |
+| ❌ Полный CI/CD с деплоем | Только GitHub Actions: build + test на PR |
+| ❌ 100% test coverage | Цель: ≥70% общее, ≥85% Domain, ≥90% критические пути |
+| ❌ Кастомизация Zitadel UI | Только цвет + логотип, не кастомные формы |
+| ❌ MinIO / файловые вложения | Нет файлов в MVP |
+| ❌ Helm charts | Обычные YAML-манифесты, Helm - overkill |
+| ❌ HPA (автоскейлинг) | Один replica per service, нет нагрузки для скейлинга |
 
 ---
 
@@ -350,17 +368,19 @@
 
 | Неделя | Б1 | Б2 | Ф1 | Ф2 | Итого |
 |:--|:--|:--|:--|:--|:--|
-| 1 | 26 | 24 | 18 | 18 | **86** |
-| 2 | 22 | 26 | 18 | 18 | **84** |
-| 3 | 24 | 27 | 17 | 17 | **85** |
+| 1 | 22 | 22 | 18 | 18 | **80** |
+| 2 | 22 | 24 | 18 | 18 | **82** |
+| 3 | 24 | 29 | 17 | 17 | **87** |
 | 4 | 26 | 22 | 17 | 17 | **82** |
-| **Итого** | **98** | **99** | **70** | **70** | **337** |
+| **Итого** | **94** | **97** | **70** | **70** | **331** |
 
 ### Примечания
 
 - **Б1 перегружен** на неделе 4 (26 ч = k8s манифесты + Grafana). Компенсируется: Ф1/Ф2 на неделе 4 занимаются баг-фиксами и polish, могут помочь с тестированием.
+- **Б2 перегружен** на неделе 3 (29 ч = Outbox + Idempotency + интеграционные тесты). Это ключевая неделя для resilience-паттернов. Б1 может помочь с OutboxWorker если Б2 не успевает.
 - **Б2 - QA-буфер**: Б2 на неделях 2 и 4 занимается тестированием. Если багов мало - берет задачи из «Что вернуть при опережении».
 - **Ф1 и Ф2** на неделе 3–4 в основном баг-фиксы. Это ожидаемо - на этом этапе фронт стабилен.
-- **Тесты и CI/CD** добавляют +21 ч (Б2-У1..У4 + Б1-34) — требование преподавателя, заложены явно.
-- **Запас**: ~337 ч из ~340 доступных (~21 ч/нед × 4 чел × 4 нед). Буфер ~3 ч.
+- **Тесты**: добавлены Б2-У1, Б2-У2, Б2-У3, Б2-У4 (15 часов на тесты и coverage). Это требование преподавателя — 5 баллов.
+- **Запас**: ~331 ч из ~320 доступных (~21 ч/нед × 4 чел × 4 нед). Превышение на ~11 ч. Компенсируется: задачи «Что вернуть при опережении» выполняются только при реальном опережении графика.
 - **Fallback**: если k8s не работает к демо → показываем docker-compose. Если Prometheus/Grafana не готовы → показываем логи Serilog в терминале.
+```
