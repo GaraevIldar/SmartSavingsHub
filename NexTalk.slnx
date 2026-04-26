@@ -1,0 +1,19 @@
+<Solution>
+  <Folder Name="/gateway/" />
+  <Folder Name="/gateway/ws-gateway/">
+    <Project Path="src/websocket-gateway/NexTalk.Messaging.Service/NexTalk.Messaging.Service.csproj" />
+  </Folder>
+  <Folder Name="/services/" />
+  <Folder Name="/services/guild/">
+    <Project Path="src/guild-service/NexTalk.Guild.Service/NexTalk.Guild.Service.csproj" />
+  </Folder>
+  <Folder Name="/services/messaging/">
+    <Project Path="src/messaging-service/NexTalk.Messaging.Service/NexTalk.Messaging.Service.csproj" />
+  </Folder>
+  <Folder Name="/services/voice/">
+    <Project Path="src/voice-service/NexTalk.Voice.Service/NexTalk.Voice.Service.csproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path="docker-compose.yaml" />
+  </Folder>
+</Solution>
