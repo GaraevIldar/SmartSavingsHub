@@ -11,7 +11,7 @@ export const ProfilePage: React.FC = () => {
 
     const handleLogout = () => {
         logout()
-        window.location.href = '/servers'
+        window.location.href = '/auth'
     }
 
     const handleEdit = () => {

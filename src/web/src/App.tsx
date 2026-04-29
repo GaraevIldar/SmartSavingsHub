@@ -7,12 +7,13 @@ import { CreateChannelPage } from './modules/channels/pages/CreateChannelPage'
 import { MembersPage } from './modules/members/pages/MembersPage'
 import { ProfilePage } from './modules/profile/pages/ProfilePage'
 import { InvitePage } from './modules/invite/pages/InvitePage'
+import {AuthPage} from "./modules/auth/pages/AuthPage.tsx";
 
 function App() {
     return (
         <BrowserRouter>
             <Routes>
-                <Route path="/" element={<Navigate to="/servers" replace />} />
+                <Route path="/" element={<Navigate to="/auth" replace />} />
                 <Route path="/servers" element={<ServersPage />} />
                 <Route path="/servers/:serverId/channels/:channelId" element={<ChannelChatPage />} />
                 <Route path="/servers/:serverId/voice/:channelId" element={<VoiceChannelPage />} />
@@ -21,6 +22,7 @@ function App() {
                 <Route path="/servers/:serverId/members" element={<MembersPage />} />
                 <Route path="/servers/:serverId/invite" element={<InvitePage />} />
                 <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/auth" element={<AuthPage />} />
             </Routes>
         </BrowserRouter>
     )
